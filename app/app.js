@@ -1,1 +1,352 @@
-const e=e=>document.querySelector(e),t=e("main"),a=new Map,n=new Map,i=e=>"$"+(+e||0).toLocaleString("en-US",{maximumFractionDigits:2}),s=e=>String(e??"").replace(/[&<>"']/g,(e=>"&#"+e.charCodeAt(0)+";")),o=(e,t)=>"#/"+e+"/"+encodeURIComponent(t),l=e=>+(e.potUsd??e.rewardAmount??0);function r(e,t){t=String(t??""),e&&e.textContent!==t&&(e.textContent=t)}const d=(t,a)=>r(e("#"+t),a);async function p(e){let t=a.get(e);if(t&&Date.now()-t.time<2e4)return t.data;if(n.has(e))return n.get(e);let i=(async()=>{let t=await fetch("https://make.fun/api/"+e);if(!t.ok)throw Error("Request failed ("+t.status+").");let n=await t.json();return a.delete(e),a.set(e,{data:n,time:Date.now()}),a.size>20&&a.delete(a.keys().next().value),n})();n.set(e,i);try{return await i}finally{n.delete(e)}}function c(){let e=!1;document.querySelectorAll("[data-time]").forEach((t=>{let a=Math.floor((new Date(t.dataset.time)-Date.now())/1e3);r(t,Number.isFinite(a)?a<=0?"Deadline passed":a>=86400?Math.floor(a/86400)+"d "+Math.floor(a%86400/3600)+"h left":Math.floor(a/3600)+"h "+Math.floor(a%3600/60)+"m "+a%60+"s left":"No deadline"),a<=0&&t.closest(".bounty")&&(delete t.dataset.time,e=!0)})),e&&S()}const u=e=>"open"===e.status&&new Date(e.deadline)>Date.now(),m=e=>+new Date(e.deadline)||1/0;let h,b=()=>{},v=[],f=0,y="",g="",w="soon",_=!1;function L(t,a,n){let i=e("#list"),s=document.createElement("div"),o=[],l=new Map;function r(){let e=Math.ceil(i.clientHeight/t)+2,r=Math.max(0,Math.min(Math.floor(i.scrollTop/t)-1,o.length-e)),d=new Set;s.style.height=o.length*t+"px";for(let i=r;i<Math.min(o.length,r+e);i++){let e=o[i],r=n(e),p=l.get(r);d.add(r),p||(p=document.createElement("div"),p.className="row",p.setAttribute("role","listitem"),l.set(r,p),s.append(p)),p.style.cssText="top:"+i*t+"px;height:"+t+"px",p.setAttribute("aria-posinset",i+1),p.setAttribute("aria-setsize",o.length),a(p,e)}for(let[e,t]of l)d.has(e)||(t.remove(),l.delete(e));c()}i.append(s),s.className="space",i.onscroll=r;let d=new ResizeObserver(r);return d.observe(i),b=()=>d.disconnect(),e=>{o=e,r()}}function R(e,t,a){e.firstChild||(e.innerHTML=t),a.forEach(((t,a)=>r(e.querySelectorAll("[data-v]")[a],t)))}const k='<div id="list" role="list" aria-label="Results" tabindex="0"></div>',M='<a class="back" href="#/">← Back to the board</a>',C=["Code","Games","Growth","Trading","Forecasting","Security","Automation"];function E(e,t){let a=!u(t);R(e,'<a class="bounty"><span class="icon" aria-hidden="true">↗</span><span><b data-v></b><small data-v></small></span><span><b class="pill" data-v></b><small class="pill muted" data-v></small></span><span class="timer pill" data-v></span><small class="entries" data-v></small></a>',[t.title,t.category+" · "+(t.sponsor?.name||"make.fun"),i(l(t))+" pot",+t.entryFeeUsd?i(t.entryFeeUsd)+" entry":"Free entry",a?"Deadline passed":t.deadline,t.submissionCount+" entries"]),e.firstChild.classList.toggle("ended",a),e.firstChild.href=o("bounty",t.slug);let n=e.querySelector(".timer");a?delete n.dataset.time:n.dataset.time=t.deadline}function S(){if("board"!==h?.type)return;let e=v.filter((e=>(_||"open"===e.status)&&(!g||e.category===g)&&[e.title,e.summary,e.category].join(" ").toLowerCase().includes(y)));e.sort(((e,t)=>u(t)-u(e)||("pot"===w?l(t)-l(e):"entries"===w?t.submissionCount-e.submissionCount:m(e)-m(t)))),h.update(e),d("count",e.length+" bounties"),d("empty",e.length?"":"No matching bounties."),d("live-tab","Live · "+v.filter((e=>"open"===e.status)).length)}async function T(){let e="competitions?activity=times",t=[];do{let a=await p(e);t.push(...a.items),e=a.next_cursor?"competitions?activity=times&cursor="+encodeURIComponent(a.next_cursor):null}while(e);v=t;let a=v.filter((e=>"open"===e.status));d("live",a.length),d("pots",i(a.reduce(((e,t)=>e+l(t)),0))),d("entries",v.reduce(((e,t)=>e+(+t.submissionCount||0)),0).toLocaleString())}function A(e,t){R(e,"<span data-v></span><span><a data-v></a><small data-v></small></span><span data-v></span><b data-v></b>",["#"+(t.rank??"—"),t.handle,t.title,t.score,t.prize]),e.querySelector("a").href=o("profile",t.handle),e.dataset.rank=t.rank||""}function U(e,t){R(e,'<a class="solution"><span><b data-v></b><small data-v></small></span><span data-v></span></a>',[t.title,t.competition.title,(t.placement?"#"+t.placement:"Entered")+(t.prize_usd?" · "+i(t.prize_usd):"")]),e.firstChild.href=o("bounty",t.competition.slug)}async function D(a=f){try{let t=h,n=["board"===t.type?T():T().catch((()=>{}))];"bounty"===t.type&&n.push(p("competitions/"+t.slug+"?submissions=summary"),p("competitions/"+t.slug+"/leaderboard?rows=first")),"profile"===t.type&&n.push(p("profiles/"+t.slug));let o=await Promise.all(n);if(a!==f)return;"board"===t.type&&S(),"bounty"===t.type&&function(t,a){for(let[e,a]of Object.entries({title:t.title,summary:t.summary,description:t.description,meta:t.category+" / "+t.status,pot:i(l(t)),facts:"Entry: "+(+t.entryFeeUsd?i(t.entryFeeUsd):"Free")+" · Fees: "+i(t.entryFeesUsd),dates:"Opened "+new Date(t.publishedAt).toLocaleString()+"\nDeadline "+new Date(t.deadline).toLocaleString()}))d(e,a);e("#timer").dataset.time=t.deadline;let n=t.rewardsNow||Object.entries(t.rewards||{}).map((([e,t])=>({place:e,amountUsd:t}))),o="<tr><th>Place</th><th>Reward</th></tr>"+n.map((e=>"<tr><td>#"+s(e.place)+"</td><td>"+i(e.amountUsd)+"</td></tr>")).join(""),r=e("#rewards");r._html!==o&&(r.innerHTML=o,r._html=o);let p=[...a.entries||[],...a.rest||[]];d("note",!1===a.phase?.scores_visible?"Scores hidden until results publish.":p.length+" ranked entries"),h.update(p.map((e=>({...e,score:e.display?.[a.rank_key]??e.values?.[a.rank_key]??"—",prize:!1===e.prize_eligible?"—":n.some((t=>+t.place==+e.prize_rank))?i(n.find((t=>+t.place==+e.prize_rank)).amountUsd):"—"})))),c()}(o[1],o[2]),"profile"===t.type&&function(t){d("title",t.display_name||t.handle),d("handle","@"+t.handle);let a=e("#picture"),n="https://make.fun/api/profiles/"+encodeURIComponent(t.handle)+"/picture.png";a.src!==n&&(a.src=n),d("bio",t.bio||"A maker on make.fun."),d("joined",t.joined_at?"Joined "+t.joined_at.slice(0,10):"");let s=t.record;d("record",s?(s.competitions_entered??0)+" entered / "+(s.competitions_won??0)+" won / "+(s.competitions_placed??0)+" placed / "+i(s.prize_usd)+" earned":""),h.update(t.solutions||[])}(o[1]),e("#error")?.remove(),window.__shotReady=!0}catch(n){if(a!==f)return;let i=e("#error");i||(i=document.createElement("p"),i.id="error",i.setAttribute("role","alert"),t.prepend(i)),i.innerHTML=s(n.message)+" <button>Retry</button>",i.querySelector("button").onclick=()=>D(),window.__shotReady=!0}}function I(){let a;window.__shotReady=!1,f++,b(),window.scrollTo(0,0);try{a=(location.hash||"#/").slice(2).split("/").map(decodeURIComponent)}catch{a=["invalid"]}if(a[0])if("bounty"===a[0]&&a[1])t.innerHTML=M+'<div class="eyebrow" id="meta"></div><h1 id="title">Loading…</h1><p id="summary"></p><div class="detail"><section><h2>The challenge</h2><div id="description"></div></section><aside><div class="eyebrow">LIVE PRIZE POOL</div><div id="pot"></div><p id="timer"></p><p id="facts"></p><p id="dates"></p><h3>Rewards</h3><table id="rewards" aria-label="Rewards"></table></aside></div><h2>Leaderboard ↗</h2><p id="note"></p><div class="leader columns"><span>RANK</span><span>BUILDER / ENTRY</span><span>SCORE</span><span>PRIZE</span></div>'+k,e("#list").className="leader",h={type:"bounty",update:L(76,A,(e=>e.submission_id))};else{if("profile"!==a[0]||!a[1])return t.innerHTML="<h1>Not found</h1>"+M,h=null,void(window.__shotReady=!0);t.innerHTML=M+'<div class="profile-head"><img id="picture" alt="" width="72" height="72"><div><h1 id="title">Loading…</h1><p id="handle"></p></div></div><p id="bio"></p><p id="joined"></p><p id="record"></p><h2>Solutions ↗</h2>'+k,h={type:"profile",update:L(90,U,(e=>e.submission_id))}}else!function(){function a(){for(let[t,a]of[["live-tab",!_],["all-tab",_]]){let n=e("#"+t);n.classList.toggle("selected",a),a?n.setAttribute("aria-current","true"):n.removeAttribute("aria-current")}}t.innerHTML='<section class="hero"><div><h1>Make your<br>next <em>move.</em> <span>✳</span></h1><p>Real challenges. Real rewards.</p></div></section><div class="heading"><h2>The bounty board <small>● Live</small></h2></div><div class="toolbar"><div><button id="live-tab">Live</button><button id="all-tab">All bounties</button></div><div><select id="category" aria-label="Category"><option value="">All categories</option>'+C.map((e=>"<option>"+e+"</option>")).join("")+'</select> <select id="sort" aria-label="Sort"><option value="soon">Closing soon</option><option value="pot">Biggest pot</option><option value="entries">Most entries</option></select></div></div><div class="columns"><span id="count">Loading…</span><span>PRIZE POOL</span><span>TIME LEFT</span><span>ENTRIES</span></div>'+k+'<p id="empty"></p>',h={type:"board",update:L(108,E,(e=>e.slug))};for(let[t,n]of[["live-tab",!1],["all-tab",!0]])e("#"+t).onclick=()=>{_=n,a(),S()};a(),e("#category").value=g,e("#sort").value=w,e("#category").onchange=t=>{g=t.target.value,e("#list").scrollTop=0,S()},e("#sort").onchange=e=>{w=e.target.value,S()},S()}();h.slug=encodeURIComponent(a[1]||""),document.title="make.fun — "+(a[0]||"Bounty board"),D()}e("input").oninput=t=>{y=t.target.value.trim().toLowerCase(),"board"===h?.type?(e("#list").scrollTop=0,S()):location.hash="#/"},e("form").onsubmit=e=>{e.preventDefault(),location.hash="#/"},addEventListener("hashchange",I),setInterval(c,1e3),setInterval((()=>{!document.hidden&&h&&D()}),6e4),I();
+const $ = selector => document.querySelector(selector);
+const main = $('main');
+const cache = new Map();
+const pending = new Map();
+const money = value => '$' + (+value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const escape = value => String(value ?? '').replace(/[&<>"']/g, char => '&#' + char.charCodeAt(0) + ';');
+const link = (type, value) => '#/' + type + '/' + encodeURIComponent(value);
+const pot = bounty => +(bounty.potUsd ?? bounty.rewardAmount ?? 0);
+const isLive = bounty => bounty.status === 'open' && new Date(bounty.deadline) > Date.now();
+const deadline = bounty => +new Date(bounty.deadline) || Infinity;
+const categories = ['Code', 'Games', 'Growth', 'Trading', 'Forecasting', 'Security', 'Automation'];
+const listMarkup = '<div id="list" role="list" aria-label="Results" tabindex="0"></div>';
+const backLink = '<a class="back" href="#/">← Back to the board</a>';
+
+let view;
+let disconnect = () => {};
+let bounties = [];
+let generation = 0;
+let query = '';
+let category = '';
+let sort = 'soon';
+let showAll = false;
+
+function text(node, value) {
+  value = String(value ?? '');
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
+const set = (id, value) => text($('#' + id), value);
+
+async function request(path) {
+  const cached = cache.get(path);
+  if (cached && Date.now() - cached.time < 20000) return cached.data;
+  if (pending.has(path)) return pending.get(path);
+
+  const task = (async () => {
+    const headers = cached?.etag ? { 'If-None-Match': cached.etag } : {};
+    const response = await fetch('https://make.fun/api/' + path, { headers });
+    if (response.status !== 304 && !response.ok) {
+      throw Error('Request failed (' + response.status + ').');
+    }
+    const unchanged = response.status === 304;
+    if (unchanged && !cached) throw Error('Received 304 without a cached response.');
+    const data = unchanged ? cached.data : await response.json();
+    cache.delete(path);
+    cache.set(path, {
+      data,
+      time: Date.now(),
+      etag: response.headers.get('ETag') || (unchanged ? cached.etag : null),
+    });
+    if (cache.size > 20) cache.delete(cache.keys().next().value);
+    return data;
+  })();
+
+  pending.set(path, task);
+  try {
+    return await task;
+  } finally {
+    pending.delete(path);
+  }
+}
+
+function tick() {
+  let expired = false;
+  document.querySelectorAll('[data-time]').forEach(node => {
+    const seconds = Math.floor((new Date(node.dataset.time) - Date.now()) / 1000);
+    text(node, !Number.isFinite(seconds) ? 'No deadline' : seconds <= 0 ? 'Deadline passed'
+      : seconds >= 86400 ? Math.floor(seconds / 86400) + 'd ' + Math.floor(seconds % 86400 / 3600) + 'h left'
+        : Math.floor(seconds / 3600) + 'h ' + Math.floor(seconds % 3600 / 60) + 'm ' + seconds % 60 + 's left');
+    if (seconds <= 0 && node.closest('.bounty')) {
+      delete node.dataset.time;
+      expired = true;
+    }
+  });
+  if (expired) renderBoard();
+}
+
+function virtualList(rowHeight, patch, keyOf) {
+  const list = $('#list');
+  const space = document.createElement('div');
+  const nodes = new Map();
+  let items = [];
+  space.className = 'space';
+  list.append(space);
+
+  function render() {
+    const count = Math.ceil(list.clientHeight / rowHeight) + 2;
+    const start = Math.max(0, Math.min(Math.floor(list.scrollTop / rowHeight) - 1, items.length - count));
+    const visible = new Set();
+    space.style.height = items.length * rowHeight + 'px';
+    for (let index = start; index < Math.min(items.length, start + count); index++) {
+      const item = items[index];
+      const key = keyOf(item);
+      let node = nodes.get(key);
+      visible.add(key);
+      if (!node) {
+        node = document.createElement('div');
+        node.className = 'row';
+        node.setAttribute('role', 'listitem');
+        nodes.set(key, node);
+        space.append(node);
+      }
+      node.style.cssText = 'top:' + index * rowHeight + 'px;height:' + rowHeight + 'px';
+      node.setAttribute('aria-posinset', index + 1);
+      node.setAttribute('aria-setsize', items.length);
+      patch(node, item);
+    }
+    for (const [key, node] of nodes) {
+      if (!visible.has(key)) {
+        node.remove();
+        nodes.delete(key);
+      }
+    }
+    tick();
+  }
+
+  list.onscroll = render;
+  const observer = new ResizeObserver(render);
+  observer.observe(list);
+  disconnect = () => observer.disconnect();
+  return next => {
+    items = next;
+    render();
+  };
+}
+
+function patchFields(node, markup, values) {
+  if (!node.firstChild) {
+    node.innerHTML = markup;
+    node._fields = node.querySelectorAll('[data-v]');
+  }
+  values.forEach((value, index) => text(node._fields[index], value));
+}
+
+function patchBounty(node, bounty) {
+  const ended = !isLive(bounty);
+  patchFields(node, '<a class="bounty"><span class="icon" aria-hidden="true">↗</span><span><b data-v></b><small data-v></small></span><span><b class="pill" data-v></b><small class="pill muted" data-v></small></span><span class="timer pill" data-v></span><small class="entries" data-v></small></a>', [
+    bounty.title,
+    bounty.category + ' · ' + (bounty.sponsor?.name || 'make.fun'),
+    money(pot(bounty)) + ' pot',
+    +bounty.entryFeeUsd ? money(bounty.entryFeeUsd) + ' entry' : 'Free entry',
+    ended ? 'Deadline passed' : bounty.deadline,
+    bounty.submissionCount + ' entries',
+  ]);
+  node.firstChild.classList.toggle('ended', ended);
+  node.firstChild.href = link('bounty', bounty.slug);
+  const timer = node.querySelector('.timer');
+  if (ended) delete timer.dataset.time;
+  else timer.dataset.time = bounty.deadline;
+}
+
+function renderBoard() {
+  if (view?.type !== 'board') return;
+  const items = bounties.filter(bounty => (showAll || bounty.status === 'open')
+    && (!category || bounty.category === category)
+    && [bounty.title, bounty.summary, bounty.category].join(' ').toLowerCase().includes(query));
+  items.sort((a, b) => isLive(b) - isLive(a) || (sort === 'pot' ? pot(b) - pot(a)
+    : sort === 'entries' ? b.submissionCount - a.submissionCount : deadline(a) - deadline(b)));
+  view.update(items);
+  set('count', items.length + ' bounties');
+  set('empty', items.length ? '' : 'No matching bounties.');
+  set('live-tab', 'Live · ' + bounties.filter(bounty => bounty.status === 'open').length);
+}
+
+async function refreshTotals() {
+  let path = 'competitions?activity=times';
+  const items = [];
+  do {
+    const page = await request(path);
+    items.push(...page.items);
+    path = page.next_cursor ? 'competitions?activity=times&cursor=' + encodeURIComponent(page.next_cursor) : null;
+  } while (path);
+  bounties = items;
+  const live = items.filter(bounty => bounty.status === 'open');
+  set('live', live.length);
+  set('pots', money(live.reduce((sum, bounty) => sum + pot(bounty), 0)));
+  set('entries', items.reduce((sum, bounty) => sum + (+bounty.submissionCount || 0), 0).toLocaleString());
+}
+
+function patchEntry(node, entry) {
+  patchFields(node, '<span data-v></span><span><a data-v></a><small data-v></small></span><span data-v></span><b data-v></b>', [
+    '#' + (entry.rank ?? '—'), entry.handle, entry.title, entry.score, entry.prize,
+  ]);
+  node.querySelector('a').href = link('profile', entry.handle);
+  node.dataset.rank = entry.rank || '';
+}
+
+function patchSolution(node, solution) {
+  patchFields(node, '<a class="solution"><span><b data-v></b><small data-v></small></span><span data-v></span></a>', [
+    solution.title, solution.competition.title,
+    (solution.placement ? '#' + solution.placement : 'Entered') + (solution.prize_usd ? ' · ' + money(solution.prize_usd) : ''),
+  ]);
+  node.firstChild.href = link('bounty', solution.competition.slug);
+}
+
+function renderBounty(bounty, leaderboard) {
+  for (const [id, value] of Object.entries({
+    title: bounty.title,
+    summary: bounty.summary,
+    description: bounty.description,
+    meta: bounty.category + ' / ' + bounty.status,
+    pot: money(pot(bounty)),
+    facts: 'Entry: ' + (+bounty.entryFeeUsd ? money(bounty.entryFeeUsd) : 'Free') + ' · Fees: ' + money(bounty.entryFeesUsd),
+    dates: 'Opened ' + new Date(bounty.publishedAt).toLocaleString() + '\nDeadline ' + new Date(bounty.deadline).toLocaleString(),
+  })) set(id, value);
+  $('#timer').dataset.time = bounty.deadline;
+  const rewards = bounty.rewardsNow || Object.entries(bounty.rewards || {}).map(([place, amountUsd]) => ({ place, amountUsd }));
+  const markup = '<tr><th>Place</th><th>Reward</th></tr>' + rewards.map(reward => '<tr><td>#' + escape(reward.place) + '</td><td>' + money(reward.amountUsd) + '</td></tr>').join('');
+  const table = $('#rewards');
+  if (table._html !== markup) {
+    table.innerHTML = markup;
+    table._html = markup;
+  }
+  const entries = [...leaderboard.entries || [], ...leaderboard.rest || []];
+  set('note', leaderboard.phase?.scores_visible === false ? 'Scores hidden until results publish.' : entries.length + ' ranked entries');
+  view.update(entries.map(entry => ({
+    ...entry,
+    score: entry.display?.[leaderboard.rank_key] ?? entry.values?.[leaderboard.rank_key] ?? '—',
+    prize: entry.prize_eligible === false ? '—'
+      : rewards.some(reward => +reward.place === +entry.prize_rank)
+        ? money(rewards.find(reward => +reward.place === +entry.prize_rank).amountUsd) : '—',
+  })));
+  tick();
+}
+
+function renderProfile(profile) {
+  set('title', profile.display_name || profile.handle);
+  set('handle', '@' + profile.handle);
+  const picture = $('#picture');
+  const source = 'https://make.fun/api/profiles/' + encodeURIComponent(profile.handle) + '/picture.png';
+  if (picture.src !== source) picture.src = source;
+  set('bio', profile.bio || 'A maker on make.fun.');
+  set('joined', profile.joined_at ? 'Joined ' + profile.joined_at.slice(0, 10) : '');
+  const record = profile.record;
+  set('record', record ? (record.competitions_entered ?? 0) + ' entered / ' + (record.competitions_won ?? 0)
+    + ' won / ' + (record.competitions_placed ?? 0) + ' placed / ' + money(record.prize_usd) + ' earned' : '');
+  view.update(profile.solutions || []);
+}
+
+async function refresh(version = generation) {
+  try {
+    const current = view;
+    const tasks = [current.type === 'board' ? refreshTotals() : refreshTotals().catch(() => {})];
+    if (current.type === 'bounty') tasks.push(
+      request('competitions/' + current.slug + '?submissions=summary'),
+      request('competitions/' + current.slug + '/leaderboard?rows=first'),
+    );
+    if (current.type === 'profile') tasks.push(request('profiles/' + current.slug));
+    const results = await Promise.all(tasks);
+    if (version !== generation) return;
+    if (current.type === 'board') renderBoard();
+    if (current.type === 'bounty') renderBounty(results[1], results[2]);
+    if (current.type === 'profile') renderProfile(results[1]);
+    $('#error')?.remove();
+    window.__shotReady = true;
+  } catch (error) {
+    if (version !== generation) return;
+    let notice = $('#error');
+    if (!notice) {
+      notice = document.createElement('p');
+      notice.id = 'error';
+      notice.setAttribute('role', 'alert');
+      main.prepend(notice);
+    }
+    notice.innerHTML = escape(error.message) + ' <button>Retry</button>';
+    notice.querySelector('button').onclick = () => refresh();
+    window.__shotReady = true;
+  }
+}
+
+function mountBoard() {
+  main.innerHTML = '<section class="hero"><div><h1>Make your<br>next <em>move.</em> <span>✳</span></h1><p>Real challenges. Real rewards.</p></div></section><div class="heading"><h2>The bounty board <small>● Live</small></h2></div><div class="toolbar"><div><button id="live-tab">Live</button><button id="all-tab">All bounties</button></div><div><select id="category" aria-label="Category"><option value="">All categories</option>'
+    + categories.map(name => '<option>' + name + '</option>').join('')
+    + '</select> <select id="sort" aria-label="Sort"><option value="soon">Closing soon</option><option value="pot">Biggest pot</option><option value="entries">Most entries</option></select></div></div><div class="columns"><span id="count">Loading…</span><span>PRIZE POOL</span><span>TIME LEFT</span><span>ENTRIES</span></div>' + listMarkup + '<p id="empty"></p>';
+  view = { type: 'board', update: virtualList(108, patchBounty, bounty => bounty.slug) };
+  function selectTab() {
+    for (const [id, selected] of [['live-tab', !showAll], ['all-tab', showAll]]) {
+      const button = $('#' + id);
+      button.classList.toggle('selected', selected);
+      if (selected) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    }
+  }
+  for (const [id, all] of [['live-tab', false], ['all-tab', true]]) {
+    $('#' + id).onclick = () => {
+      showAll = all;
+      selectTab();
+      renderBoard();
+    };
+  }
+  selectTab();
+  $('#category').value = category;
+  $('#sort').value = sort;
+  $('#category').onchange = event => {
+    category = event.target.value;
+    $('#list').scrollTop = 0;
+    renderBoard();
+  };
+  $('#sort').onchange = event => {
+    sort = event.target.value;
+    renderBoard();
+  };
+  renderBoard();
+}
+
+function route() {
+  window.__shotReady = false;
+  generation++;
+  disconnect();
+  window.scrollTo(0, 0);
+  let parts;
+  try {
+    parts = (location.hash || '#/').slice(2).split('/').map(decodeURIComponent);
+  } catch {
+    parts = ['invalid'];
+  }
+  if (!parts[0]) mountBoard();
+  else if (parts[0] === 'bounty' && parts[1]) {
+    main.innerHTML = backLink + '<div class="eyebrow" id="meta"></div><h1 id="title">Loading…</h1><p id="summary"></p><div class="detail"><section><h2>The challenge</h2><div id="description"></div></section><aside><div class="eyebrow">LIVE PRIZE POOL</div><div id="pot"></div><p id="timer"></p><p id="facts"></p><p id="dates"></p><h3>Rewards</h3><table id="rewards" aria-label="Rewards"></table></aside></div><h2>Leaderboard ↗</h2><p id="note"></p><div class="leader columns"><span>RANK</span><span>BUILDER / ENTRY</span><span>SCORE</span><span>PRIZE</span></div>' + listMarkup;
+    $('#list').className = 'leader';
+    view = { type: 'bounty', update: virtualList(76, patchEntry, entry => entry.submission_id) };
+  } else if (parts[0] === 'profile' && parts[1]) {
+    main.innerHTML = backLink + '<div class="profile-head"><img id="picture" alt="" width="72" height="72"><div><h1 id="title">Loading…</h1><p id="handle"></p></div></div><p id="bio"></p><p id="joined"></p><p id="record"></p><h2>Solutions ↗</h2>' + listMarkup;
+    view = { type: 'profile', update: virtualList(90, patchSolution, solution => solution.submission_id) };
+  } else {
+    main.innerHTML = '<h1>Not found</h1>' + backLink;
+    view = null;
+    window.__shotReady = true;
+    return;
+  }
+  view.slug = encodeURIComponent(parts[1] || '');
+  document.title = 'make.fun — ' + (parts[0] || 'Bounty board');
+  refresh();
+}
+
+$('input').oninput = event => {
+  query = event.target.value.trim().toLowerCase();
+  if (view?.type === 'board') {
+    $('#list').scrollTop = 0;
+    renderBoard();
+  } else location.hash = '#/';
+};
+$('form').onsubmit = event => {
+  event.preventDefault();
+  location.hash = '#/';
+};
+addEventListener('hashchange', route);
+setInterval(tick, 1000);
+setInterval(() => {
+  if (!document.hidden && view) refresh();
+}, 60000);
+route();
