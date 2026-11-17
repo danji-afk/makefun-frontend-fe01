@@ -29,7 +29,7 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
 };
 
-createServer((request, response) => {
+const server = createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
   let pathname: string;
   try {
@@ -59,6 +59,17 @@ createServer((request, response) => {
     'cache-control': 'no-store',
   });
   createReadStream(file).pipe(response);
-}).listen(port, '127.0.0.1', () => {
-  console.log(`app/ is on http://localhost:${port}`);
+});
+
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use; stop the other server or choose another port with --port <n>.`);
+  } else {
+    console.error('Unable to start the app server:', error.message);
+  }
+  process.exitCode = 1;
+});
+
+server.listen(port, '127.0.0.1', () => {
+  console.log(`Ready: http://localhost:${port} (serving app/)`);
 });
